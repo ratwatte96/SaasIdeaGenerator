@@ -1,0 +1,9 @@
+FROM golang:1.22 AS build
+WORKDIR /app
+COPY . .
+RUN go mod tidy && go build -o /out/api ./main.go
+
+FROM debian:bookworm-slim
+WORKDIR /app
+COPY --from=build /out/api /app/api
+CMD ["/app/api"]
