@@ -1,0 +1,49 @@
+services:
+  database:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-saas_ideas}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ../backend/migrations:/migrations
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile.api
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://postgres:postgres@database:5432/saas_ideas?sslmode=disable}
+      API_PORT: 8080
+    depends_on:
+      - database
+    ports:
+      - "8080:8080"
+
+  collector:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile.collector
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://postgres:postgres@database:5432/saas_ideas?sslmode=disable}
+      COLLECTOR_USE_MOCK_DATA: ${COLLECTOR_USE_MOCK_DATA:-true}
+      COLLECTOR_RATE_LIMIT_RPS: ${COLLECTOR_RATE_LIMIT_RPS:-1}
+    depends_on:
+      - database
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://backend:8080/api
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+
+volumes:
+  db_data:
